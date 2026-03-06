@@ -1,0 +1,141 @@
+{
+  "name": "Groq AI Chatbot API",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "groq-chat",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "groq-chat-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  \"model\": $json.body.model || \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": $json.body.system_prompt || \"You are a helpful AI assistant. Be concise and clear.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": $json.body.message\n    }\n  ],\n  \"temperature\": $json.body.temperature || 0.7,\n  \"max_tokens\": $json.body.max_tokens || 2048\n}) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "groq-api-call",
+      "name": "Call Groq API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Groq API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "response",
+              "value": "={{ $json.choices[0].message.content }}"
+            },
+            {
+              "name": "model",
+              "value": "={{ $json.model }}"
+            }
+          ],
+          "number": [
+            {
+              "name": "prompt_tokens",
+              "value": "={{ $json.usage.prompt_tokens }}"
+            },
+            {
+              "name": "completion_tokens",
+              "value": "={{ $json.usage.completion_tokens }}"
+            },
+            {
+              "name": "total_tokens",
+              "value": "={{ $json.usage.total_tokens }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "format-response",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  success: true,\n  response: $json.response,\n  model: $json.model,\n  usage: {\n    prompt_tokens: $json.prompt_tokens,\n    completion_tokens: $json.completion_tokens,\n    total_tokens: $json.total_tokens\n  }\n}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [960, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [{ "node": "Call Groq API", "type": "main", "index": 0 }]
+      ]
+    },
+    "Call Groq API": {
+      "main": [
+        [{ "node": "Format Response", "type": "main", "index": 0 }]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "AI Chatbot API powered by Groq. Send a POST request with { \"message\": \"your question\" } and receive an AI response. Supports optional model, system_prompt, temperature, and max_tokens parameters.",
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    { "name": "AI" },
+    { "name": "Groq" },
+    { "name": "Chatbot" }
+  ]
+}

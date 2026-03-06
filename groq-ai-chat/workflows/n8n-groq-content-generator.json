@@ -1,0 +1,123 @@
+{
+  "name": "Groq Content Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "groq-content",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "groq-content-webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  \"model\": \"llama-3.3-70b-versatile\",\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a professional content creator. Generate high-quality content based on the user's request. Always respond with valid JSON in this exact format: {\\\"title\\\": \\\"string\\\", \\\"content\\\": \\\"string (use markdown formatting)\\\", \\\"summary\\\": \\\"one-line summary\\\", \\\"hashtags\\\": [\\\"tag1\\\", \\\"tag2\\\", \\\"tag3\\\"]}\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Create a \" + ($json.body.type || \"blog post\") + \" about: \" + $json.body.topic + ($json.body.tone ? \". Tone: \" + $json.body.tone : \"\") + ($json.body.length ? \". Length: \" + $json.body.length : \"\")\n    }\n  ],\n  \"temperature\": 0.8,\n  \"max_tokens\": 4096,\n  \"response_format\": { \"type\": \"json_object\" }\n}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "groq-api-call",
+      "name": "Generate Content via Groq",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [480, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "Groq API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "generated_content",
+              "value": "={{ $json.choices[0].message.content }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-content",
+      "name": "Extract Content",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [720, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  success: true,\n  content: JSON.parse($json.generated_content),\n  metadata: {\n    model: \"llama-3.3-70b-versatile\",\n    generated_at: new Date().toISOString()\n  }\n}) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [960, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [{ "node": "Generate Content via Groq", "type": "main", "index": 0 }]
+      ]
+    },
+    "Generate Content via Groq": {
+      "main": [
+        [{ "node": "Extract Content", "type": "main", "index": 0 }]
+      ]
+    },
+    "Extract Content": {
+      "main": [
+        [{ "node": "Respond to Webhook", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Content Generation Pipeline powered by Groq. Send a POST request with { \"topic\": \"your topic\", \"type\": \"blog post|tweet|linkedin\" } to generate structured content with title, body, summary, and hashtags.",
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    { "name": "AI" },
+    { "name": "Groq" },
+    { "name": "Content" }
+  ]
+}

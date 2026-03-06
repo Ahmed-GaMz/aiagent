@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Groq AI Chat — Lightning-Fast AI</title>
+  <meta name="description" content="Ultra-fast AI chat powered by Groq's LPU inference engine. Chat with Llama, Mixtral, and Gemma models instantly.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- API Key Modal -->
+  <div class="modal-overlay" id="apiKeyModal">
+    <div class="modal">
+      <div class="modal-title">⚡ Connect to Groq</div>
+      <div class="modal-desc">
+        Enter your Groq API key to start chatting. Your key is stored locally in your browser and never sent anywhere except directly to Groq's API.
+      </div>
+      <input 
+        type="password" 
+        class="modal-input" 
+        id="apiKeyInput" 
+        placeholder="gsk_xxxxxxxxxxxxxxxxxxxxx"
+        autocomplete="off"
+      >
+      <button class="modal-btn" id="saveApiKeyBtn">Start Chatting →</button>
+      <a href="https://console.groq.com/keys" target="_blank" class="modal-link">
+        Don't have a key? Get one free at console.groq.com →
+      </a>
+    </div>
+  </div>
+
+  <!-- Error Toast -->
+  <div class="toast hidden" id="errorToast"></div>
+
+  <div class="app">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <div class="logo-icon">⚡</div>
+          <div>
+            <div class="logo-text">Groq AI Chat</div>
+            <div class="logo-badge">Lightning Fast</div>
+          </div>
+        </div>
+        <button class="new-chat-btn" id="newChatBtn">
+          <span>+</span> New Chat
+        </button>
+      </div>
+
+      <div class="sidebar-conversations" id="conversationList">
+        <!-- Conversation items will be populated by JS -->
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="settings-group">
+          <label class="settings-label">Model</label>
+          <select class="settings-select" id="modelSelect">
+            <option value="llama-3.3-70b-versatile">Llama 3.3 70B</option>
+            <option value="llama-3.1-8b-instant">Llama 3.1 8B (Fastest)</option>
+            <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+            <option value="gemma2-9b-it">Gemma 2 9B</option>
+          </select>
+        </div>
+
+        <div class="system-prompt-group">
+          <div class="system-prompt-toggle" id="systemPromptToggle">
+            <label class="settings-label">System Prompt</label>
+            <span class="toggle-arrow">▼</span>
+          </div>
+          <div class="system-prompt-content" id="systemPromptContent">
+            <textarea class="system-textarea" id="systemPrompt" placeholder="You are a helpful assistant...">You are a highly knowledgeable, friendly AI assistant. Provide clear, concise, and well-structured answers. Use markdown formatting when helpful.</textarea>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <label class="settings-label">API Key</label>
+          <button class="new-chat-btn" id="changeApiKeyBtn" style="font-size:12px">
+            🔑 Change API Key
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Chat -->
+    <main class="chat-main">
+      <div class="chat-topbar">
+        <div class="topbar-left">
+          <button class="menu-btn" id="menuBtn">☰</button>
+          <div class="model-display">
+            <div class="model-dot"></div>
+            <span class="model-name" id="topbarModel">Llama 3.3 70B</span>
+            <span class="model-speed" id="topbarSpeed">~250 tok/s</span>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <button class="topbar-btn" id="exportBtn">📥 Export</button>
+          <button class="topbar-btn" id="clearBtn">🗑️ Clear</button>
+        </div>
+      </div>
+
+      <div class="chat-messages" id="chatMessages">
+        <!-- Welcome Screen -->
+        <div class="welcome-screen" id="welcomeScreen">
+          <div class="welcome-icon">⚡</div>
+          <h1 class="welcome-title">Groq AI Chat</h1>
+          <p class="welcome-subtitle">
+            Lightning-fast AI responses powered by Groq's LPU inference engine. 
+            Choose a model and start chatting — or try one of the prompts below.
+          </p>
+          <div class="quick-prompts">
+            <div class="quick-prompt" data-prompt="Explain quantum computing in simple terms, like I'm 10 years old.">
+              <div class="quick-prompt-icon">🧪</div>
+              <div class="quick-prompt-text">Explain quantum computing simply</div>
+            </div>
+            <div class="quick-prompt" data-prompt="Write a Python function that implements binary search with detailed comments.">
+              <div class="quick-prompt-icon">💻</div>
+              <div class="quick-prompt-text">Write a binary search in Python</div>
+            </div>
+            <div class="quick-prompt" data-prompt="Create a detailed meal plan for a week with healthy, budget-friendly recipes.">
+              <div class="quick-prompt-icon">🍳</div>
+              <div class="quick-prompt-text">Create a weekly meal plan</div>
+            </div>
+            <div class="quick-prompt" data-prompt="What are the top 10 most impactful AI breakthroughs of the last 5 years? Explain each briefly.">
+              <div class="quick-prompt-icon">🤖</div>
+              <div class="quick-prompt-text">Top 10 AI breakthroughs</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chat-input-area">
+        <div class="input-wrapper">
+          <textarea 
+            class="chat-textarea" 
+            id="chatInput" 
+            placeholder="Message Groq AI..." 
+            rows="1"
+          ></textarea>
+          <button class="send-btn" id="sendBtn" disabled>➤</button>
+        </div>
+        <div class="input-hint">Press Enter to send · Shift+Enter for new line</div>
+      </div>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
